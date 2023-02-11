@@ -1,12 +1,12 @@
 # 注意：修改 default:    中的型号为你需要编译的型号，注意名称要与configs/templates/目录下的名字相同
-name: Build MI-R4A Padavan
+name: Build K2P Padavan
 
 on:
   workflow_dispatch:
     inputs:
       production:
         description: 设置编译的固件型号,空格分隔.
-        default: "MI-R4A"
+        default: "K2P"
         required: false
       release:
         description: "是否需要发布到Release? (不发布也可以到Artifacts下载)"
@@ -18,10 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-   #- uses: hendrikmuhs/ccache-action@v1.2.3
     - uses: actions/setup-go@v3
       with:
-          go-version: '^1.20.0'    
+          go-version: '^1.19.5'     
     - uses: actions/cache@v3
       with:
           path: |
@@ -84,7 +83,7 @@ jobs:
     - name: Build Firmware
       env:
         TNAME: "${{ github.event.inputs.production }}"
-        MHZ: 1120               # CPU超频频率 必须为20的倍数
+        MHZ: 600               # CPU超频频率 必须为20的倍数
       run: |
         #if [ -f public/Xray.Makefile ] ; then
         #mv -f public/Xray.Makefile ${{ env.DIR }}/trunk/user/xray/Makefile
@@ -98,12 +97,11 @@ jobs:
         #else
         #exit 2 
         #fi
-        cp -f public/MI-R4A.config ${{ env.DIR }}/trunk/configs/templates
+        cp -f public/K2P.config ${{ env.DIR }}/trunk/configs/templates
         #cp -f public/ssr-monitor ${{ env.DIR }}/trunk/user/shadowsocks/scripts
         #cp -f public/shadowsocks.sh ${{ env.DIR }}/trunk/user/shadowsocks/scripts
-        cp -f public/adguardhome.sh ${{ env.DIR }}/trunk/user/adguardhome
-        cp -f public/Makefile ${{ env.DIR }}/trunk/user/e2fsprogs
-        #cp -f public/build_firmware_modify ${{ env.DIR }}/trunk
+        #cp -f public/adguardhome.sh ${{ env.DIR }}/trunk/user/adguardhome
+        #cp -f public/Makefile ${{ env.DIR }}/trunk/user/e2fsprogs 
         cwd=`pwd`
         CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
         cd ${{ env.DIR }}/trunk
@@ -119,6 +117,7 @@ jobs:
         echo "configs/templates/$m.config not found "
         exit 0
         fi
+        sed 's/192.168.2/10.0.0/g' -i user/shared/defaults.h
         cp -f configs/templates/$m.config .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=n/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=y/g' .config
         ############################################################################################
@@ -140,7 +139,7 @@ jobs:
         sed -i '/CONFIG_FIRMWARE_INCLUDE_SMARTDNS/d' .config #删除配置项SMARTDNS
         sed -i '/CONFIG_FIRMWARE_INCLUDE_SRELAY/d' .config #删除配置项SRELAY
         sed -i '/CONFIG_FIRMWARE_INCLUDE_KUMASOCKS/d' .config #删除配置项KUMASOCKS
-        sed -i '/CONFIG_FIRMWARE_CPU_900MHZ/d' .config #删除配置项超频900MHz
+        sed -i '/CONFIG_FIRMWARE_CPU_600MHZ/d' .config #删除配置项超频900MHz
         sed -i '/CONFIG_FIRMWARE_INCLUDE_SSOBFS/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_V2RAY/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_XRAY/d' .config
@@ -169,10 +168,10 @@ jobs:
         echo "CONFIG_FIRMWARE_INCLUDE_DNSFORWARDER=n" >> .config #DNSFORWARDER
         echo "CONFIG_FIRMWARE_INCLUDE_TUNSAFE=n" >> .config #TUNSAFE
         echo "CONFIG_FIRMWARE_INCLUDE_SRELAY=n" >> .config #可以不集成
-        echo "CONFIG_FIRMWARE_CPU_900MHZ=y" >> .config #开启超频，仅MT7621可用
+        echo "CONFIG_FIRMWARE_CPU_600MHZ=y" >> .config #开启超频，仅MT7621可用
         ##科学上网## 
         echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config #科学上网插件，选择n后全部有关插件都不集成
-        echo "CONFIG_FIRMWARE_INCLUDE_SSOBFS=y" >> .config # simple-obfs混淆插件
+        echo "CONFIG_FIRMWARE_INCLUDE_SSOBFS=n" >> .config # simple-obfs混淆插件
         echo "CONFIG_FIRMWARE_INCLUDE_V2RAY=n" >> .config #集成v2ray执行文件（3.6M左右)
         echo "CONFIG_FIRMWARE_INCLUDE_XRAY=y" >> .config #集成xray执行文件（3.6M左右)
         echo "CONFIG_FIRMWARE_INCLUDE_TROJAN=y" >> .config #集成trojan执行文件(1.1M左右)
@@ -180,14 +179,14 @@ jobs:
         ##科学上网##
         
         ##广告管理##
-        echo "CONFIG_FIRMWARE_INCLUDE_ADBYBY=y" >> .config #adbyby plus+
+        echo "CONFIG_FIRMWARE_INCLUDE_ADBYBY=n" >> .config #adbyby plus+
         echo "CONFIG_FIRMWARE_INCLUDE_KOOLPROXY=n" >> .config #KP广告过滤
         ##广告管理##
         
         ##DNS服务##
-        echo "CONFIG_FIRMWARE_INCLUDE_SMARTDNS=y" >> .config #smartdns
+        echo "CONFIG_FIRMWARE_INCLUDE_SMARTDNS=n" >> .config #smartdns
         echo "CONFIG_FIRMWARE_INCLUDE_SMARTDNSBIN=n" >> .config #smartdns二进制文件
-        echo "CONFIG_FIRMWARE_INCLUDE_ADGUARDHOME=y" >> .config #adg DNS去AD
+        echo "CONFIG_FIRMWARE_INCLUDE_ADGUARDHOME=n" >> .config #adg DNS去AD
         ##DNS服务##
         
         ##文件管理##
@@ -209,9 +208,9 @@ jobs:
         echo "CONFIG_FIRMWARE_INCLUDE_WIREGUARD=n" >>.config #wireguard 10k
         ##内网穿透服务##
         echo "CONFIG_FIRMWARE_INCLUDE_ALDRIVER=n" >> .config #ALDRIVER  ~3m
-        echo "CONFIG_FIRMWARE_INCLUDE_SQM=y" >> .config #SQM
+        echo "CONFIG_FIRMWARE_INCLUDE_SQM=n" >> .config #SQM
         echo "CONFIG_FIRMWARE_INCLUDE_LIBCGROUP=n" >> .config #LIBCGROUP
-        echo "CONFIG_FIRMWARE_INCLUDE_MSD_LITE=y" >> .config #MSD_LITE
+        echo "CONFIG_FIRMWARE_INCLUDE_MSD_LITE=n" >> .config #MSD_LITE
         #########################################################################################
         # 自定义添加其它功能请参考源码configs/templates/目录下的config文件。按照上面的格式添加即可
         # 格式如下：
